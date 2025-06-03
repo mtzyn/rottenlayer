@@ -8,23 +8,23 @@ import { Oswald } from 'next/font/google';
 import { Metal_Mania } from 'next/font/google';
 import { fadeSlideUp, ctaGlow, bgPulse, textGlow } from './animations';
 
-// Tipografía fuerte y geométrica para el sitio entero
+// BASEPATH desde variable de entorno (funciona en export estático y Pages)
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || '';
+
 const oswald = Oswald({ weight: ['400', '700'], subsets: ['latin'] });
-// Tipografía "metal" para el texto hero principal
 const metalMania = Metal_Mania({ weight: '400', subsets: ['latin'] });
 
 /* ---- HERO BASE COMPONENTS ---- */
 const HeroPhrase = styled.h1`
   font-size: 3.5rem;
   line-height: 1.2;
-  margin-bottom: 3rem; /* mayor espacio antes del botón */
+  margin-bottom: 3rem;
   color: #eee;
-  background: rgba(0, 0, 0, 0.6);         /* overlay semitransparente */
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7); /* legible y dramático */
+  background: rgba(0, 0, 0, 0.6);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
   display: inline-block;
   padding: 1rem 1.5rem;
   border-radius: 0.5rem;
-
   @media (max-width: 600px) {
     font-size: 2.8rem;
     margin-bottom: 2.5rem;
@@ -38,18 +38,17 @@ const CtaButton = styled(Link)`
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  padding: 1rem 3rem; /* padding horizontal aumentado */
+  padding: 1rem 3rem;
   text-decoration: none;
   border: 2px solid #4b4b4b;
   border-radius: 4px;
   position: relative;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.8); /* solo sombra negra */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.8);
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.9);
   transition: transform 0.2s, box-shadow 0.2s;
-
   &:hover {
     transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.9); /* sombra negra en hover */
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.9);
   }
 `;
 
@@ -68,14 +67,11 @@ const Accent = styled.span`
   font-family: inherit;
 `;
 
-/* ---- ANIMATED COMPONENTS ---- */
-// Hero principal con fade+slide
 const AnimatedHeroPhrase = styled(HeroPhrase)`
   animation: ${fadeSlideUp} 0.99s cubic-bezier(.36,.4,.44,1.12);
   animation-fill-mode: both;
 `;
 
-// Botón CTA "Contact Us" con glow sutil
 const AnimatedCtaButton = styled(CtaButton)`
   animation: ${ctaGlow} 5s ease-in-out infinite;
   box-shadow: 0 0 12px 0 rgba(255,255,255,0.09);
@@ -89,13 +85,6 @@ const AnimatedCtaButton = styled(CtaButton)`
   }
 `;
 
-// Fondo pulsante
-// (Ya no se usa AnimatedHeroBgGlobal en JSX, por lo que no es necesario mantenerlo)
-// const AnimatedHeroBgGlobal = styled(HeroBgGlobal)`
-//   animation: ${bgPulse} 32s ease-in-out infinite;
-// `;
-
-// Glitch/Jitter para spans
 const GlitchAccent = styled(Accent)`
   cursor: pointer;
   transition: 
@@ -110,7 +99,6 @@ const GlitchAccent = styled(Accent)`
   }
 `;
 
-// Array con los links de la navbar (orden actualizado)
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Band', href: '/band' },
@@ -127,7 +115,7 @@ export default function HomePage() {
     <>
       <HeroBgGlobal>
         <AnimatedBgImage
-          src="/hero.webp"
+          src={`${basePath}/hero.webp`}
           alt="Fondo Hero Rotten Layer"
           fill
           sizes="100vw"
@@ -139,7 +127,7 @@ export default function HomePage() {
         <Header>
           <LogoLink href="/" style={{ marginLeft: 0 }}>
             <Image
-              src="/logo.png"
+              src={`${basePath}/logo.png`}
               alt="Rotten Layer Logo"
               width={64}
               height={64}
@@ -151,7 +139,6 @@ export default function HomePage() {
             <NavToggle onClick={() => setMenuOpen((prev) => !prev)}>
               {menuOpen ? '✕' : '☰'}
             </NavToggle>
-
             <NavList className={menuOpen ? 'open' : ''}>
               {NAV_LINKS.map(({ label, href }) => (
                 <li key={label}>
@@ -161,7 +148,6 @@ export default function HomePage() {
             </NavList>
           </Nav>
         </Header>
-
         <Container>
           <Hero>
             <HeroContent>
