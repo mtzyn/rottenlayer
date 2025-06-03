@@ -1,0 +1,9 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: 'Montserrat', sans-serif; /* Montserrat se cargará desde <head> */
+  background-color: #181818;
+  color: #111111;
+}
