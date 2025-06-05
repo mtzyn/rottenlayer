@@ -4,6 +4,9 @@ const nextConfig = {
   output: 'export',
   basePath: isGithubPages ? '/rottenlayer' : '',
   assetPrefix: isGithubPages ? '/rottenlayer/' : '',
+  images: {
+    unoptimized: true
+  }
 };
 
 module.exports = nextConfig;
