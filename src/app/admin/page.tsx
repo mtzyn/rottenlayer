@@ -28,6 +28,12 @@ interface MerchItem {
   sizes: string[];
 }
 
+interface PhotoItem {
+  _id: string;
+  url: string;
+  alt?: string;
+}
+
 const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY || 'admin123';
 const POSTER_CHOICES = [
   'EventoMantra.jpeg', 'MetalSouls.webp', 'AZKABAN.webp', 'SemanaU.webp',
@@ -70,12 +76,25 @@ export default function AdminPage() {
   const [merchPosterFile, setMerchPosterFile] = useState<File | null>(null);
   const [merchPreviewUrl, setMerchPreviewUrl] = useState<string>('');
   const [isUploadingMerch, setIsUploadingMerch] = useState(false);
+  const [photos, setPhotos] = useState<PhotoItem[]>([]);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoAlt, setPhotoAlt] = useState('');
+  const [photoPreview, setPhotoPreview] = useState<string>('');
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  const [videoUrl, setVideoUrl] = useState('');
+  const [isUpdatingVideo, setIsUpdatingVideo] = useState(false);
+
+  const [section, setSection] = useState<'events' | 'merch' | 'media'>('events');
+
   const router = useRouter();
 
   useEffect(() => {
     if (authenticated) {
       fetchEvents();
       fetchMerch();
+      fetchPhotos();
+      fetchVideo();
     }
   }, [authenticated]);
 
@@ -98,6 +117,26 @@ export default function AdminPage() {
     } catch (err) {
       console.error('Error fetching merch:', err);
       setMerch([]);
+    }
+  }
+
+  async function fetchPhotos() {
+    try {
+      const res = await fetch('/api/media', { cache: 'no-store' });
+      const data = await res.json();
+      setPhotos(toArray<PhotoItem>(data));
+    } catch {
+      setPhotos([]);
+    }
+  }
+
+  async function fetchVideo() {
+    try {
+      const res = await fetch('/api/media/video', { cache: 'no-store' });
+      const data = await res.json();
+      setVideoUrl(data?.youtubeUrl || '');
+    } catch {
+      setVideoUrl('');
     }
   }
 
@@ -175,6 +214,77 @@ export default function AdminPage() {
     } catch {
       alert('Error de red al eliminar producto');
     }
+  }
+
+  function handlePhotoFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] || null;
+    setPhotoFile(file);
+    setPhotoPreview(file ? URL.createObjectURL(file) : '');
+  }
+
+  async function handleAddPhoto(e: FormEvent) {
+    e.preventDefault();
+    if (!photoFile) {
+      setErrorMessage('Selecciona una imagen de la galería');
+      return;
+    }
+    setIsUploadingPhoto(true);
+    const fd = new FormData();
+    fd.append('file', photoFile);
+    const upRes = await fetch('/api/upload', { method: 'POST', body: fd });
+    if (!upRes.ok) {
+      setErrorMessage('Error al subir imagen de galería');
+      setIsUploadingPhoto(false);
+      return;
+    }
+    const { url } = await upRes.json();
+    try {
+      const res = await fetch('/api/media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, alt: photoAlt }),
+      });
+      if (res.ok) {
+        setPhotoFile(null);
+        setPhotoAlt('');
+        setPhotoPreview('');
+        fetchPhotos();
+        setErrorMessage('');
+      } else {
+        setErrorMessage('Error al guardar en BD');
+      }
+    } catch {
+      setErrorMessage('Error de red al guardar imagen');
+    }
+    setIsUploadingPhoto(false);
+  }
+
+  async function handleDeletePhoto(id: string) {
+    if (!confirm('¿Eliminar esta foto?')) return;
+    try {
+      const res = await fetch(`/api/media?id=${id}`, { method: 'DELETE' });
+      if (res.ok) fetchPhotos();
+      else alert('Error al eliminar foto');
+    } catch {
+      alert('Error de red al eliminar');
+    }
+  }
+
+  async function handleUpdateVideo(e: FormEvent) {
+    e.preventDefault();
+    if (!videoUrl) return;
+    setIsUpdatingVideo(true);
+    try {
+      await fetch('/api/media/video', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ youtubeUrl: videoUrl }),
+      });
+      setErrorMessage('');
+    } catch {
+      setErrorMessage('Error al actualizar video');
+    }
+    setIsUpdatingVideo(false);
   }
 
   function handlePosterSelectChange(e: ChangeEvent<HTMLSelectElement>) {
@@ -303,188 +413,265 @@ export default function AdminPage() {
           <LogoutButton onClick={handleLogout}>Salir</LogoutButton>
         </HeaderAdmin>
 
-        <SectionAdmin>
-          <SectionTitleAdmin className={metalMania.className}>Agregar Nuevo Evento</SectionTitleAdmin>
-          <EventForm onSubmit={handleAddEvent} encType="multipart/form-data">
-            <FormField>
-              <FormLabel>Título:</FormLabel>
-              <FormInput
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              />
-            </FormField>
-            <FormField>
-              <FormLabel>Fecha y hora:</FormLabel>
-              <FormInput
-                type="datetime-local"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              />
-            </FormField>
-            <FormField>
-              <FormLabel>Ubicación:</FormLabel>
-              <FormInput
-                type="text"
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              />
-            </FormField>
-            <FormField>
-              <FormLabel>Póster del evento:</FormLabel>
-              <RadioGroup>
-                <label>
-                  <input
-                    type="radio"
-                    checked={posterType === 'upload'}
-                    onChange={() => {
-                      setPosterType('upload');
-                      setPreviewUrl('');
-                    }}
-                  />
-                  Subir nueva imagen (.webp, .jpg, .png)
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    checked={posterType === 'choose'}
-                    onChange={() => {
-                      setPosterType('choose');
-                      setPreviewUrl(`/event-posters/${selectedPoster}`);
-                    }}
-                  />
-                  Elegir existente
-                </label>
-              </RadioGroup>
-              {posterType === 'upload' && (
-                <FormInput
-                  type="file"
-                  accept=".webp,.png,.jpg,.jpeg"
-                  onChange={handlePosterFileChange}
-                />
-              )}
-              {posterType === 'choose' && (
-                <Select value={selectedPoster} onChange={handlePosterSelectChange}>
-                  {POSTER_CHOICES.map((name) => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </Select>
-              )}
-              {previewUrl && (
-                <PosterPreview>
-                  <img src={previewUrl} alt="preview" width={110} height={140} />
-                </PosterPreview>
-              )}
-            </FormField>
-            <FormField>
-              <FormLabel>Tipo de evento:</FormLabel>
-              <Select
-                value={customStatus}
-                onChange={e => setCustomStatus(e.target.value as any)}
-              >
-                <option value="auto">Automático según fecha</option>
-                <option value="upcoming">Forzar como Próximo (upcoming)</option>
-                <option value="previous">Forzar como Anterior (previous)</option>
-              </Select>
-            </FormField>
-            <SubmitButton type="submit" disabled={isUploading}>
-              {isUploading ? 'Subiendo...' : 'Añadir Evento'}
-            </SubmitButton>
-          </EventForm>
-          {errorMessage && <FormError>{errorMessage}</FormError>}
-        </SectionAdmin>
+        {/* === TAB BAR === */}
+        <TabBar>
+          <TabButton $active={section === 'events'} onClick={() => setSection('events')}>
+            Eventos
+          </TabButton>
+          <TabButton $active={section === 'merch'} onClick={() => setSection('merch')}>
+            Merch
+          </TabButton>
+          <TabButton $active={section === 'media'} onClick={() => setSection('media')}>
+            Media
+          </TabButton>
+        </TabBar>
 
-        <SectionAdmin>
-          <SectionTitleAdmin className={metalMania.className}>Eventos Existentes</SectionTitleAdmin>
-          {!Array.isArray(events) || events.length === 0 ? (
-            <p>No hay eventos.</p>
-          ) : (
-            <EventsList>
-              {events.map((evt) => (
-                <EventItem key={evt._id}>
-                  <EventInfoAdmin>
-                    <strong>{evt.title}</strong> —{' '}
-                    {new Date(evt.date).toLocaleString('es-ES', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}{' '}
-                    — {evt.location} — <em>{evt.status}</em>
-                  </EventInfoAdmin>
-                  <DeleteButton onClick={() => handleDeleteEvent(evt._id)}>Eliminar</DeleteButton>
-                </EventItem>
-              ))}
-            </EventsList>
-          )}
-        </SectionAdmin>
-
-        <SectionAdmin>
-          <SectionTitleAdmin className={metalMania.className}>Agregar Producto Merch</SectionTitleAdmin>
-          <EventForm onSubmit={handleAddMerch} encType="multipart/form-data">
-            <FormField>
-              <FormLabel>Título:</FormLabel>
-              <FormInput value={merchForm.title} onChange={e => setMerchForm({ ...merchForm, title: e.target.value })} />
-            </FormField>
-            <FormField>
-              <FormLabel>Descripción:</FormLabel>
-              <FormInput value={merchForm.description} onChange={e => setMerchForm({ ...merchForm, description: e.target.value })} />
-            </FormField>
-            <FormField>
-              <FormLabel>Precio:</FormLabel>
-              <FormInput type="number" value={merchForm.price} onChange={e => setMerchForm({ ...merchForm, price: e.target.value })} />
-            </FormField>
-            <FormField>
-              <FormLabel>Categoría:</FormLabel>
-              <FormInput value={merchForm.category} onChange={e => setMerchForm({ ...merchForm, category: e.target.value })} />
-            </FormField>
-            <FormField>
-              <FormLabel>Tallas disponibles:</FormLabel>
-              <RadioGroup>
-                {['S','M','L','XL'].map(sz => (
-                  <label key={sz}>
-                    <input
-                      type="checkbox"
-                      checked={merchForm.sizes.includes(sz)}
-                      onChange={e => {
-                        const next = e.target.checked
-                          ? [...merchForm.sizes, sz]
-                          : merchForm.sizes.filter(s => s !== sz);
-                        setMerchForm({ ...merchForm, sizes: next });
-                      }}
+        {section === 'events' && (
+          <>
+            <SectionAdmin>
+              <SectionTitleAdmin className={metalMania.className}>Agregar Nuevo Evento</SectionTitleAdmin>
+              <EventForm onSubmit={handleAddEvent} encType="multipart/form-data">
+                <FormField>
+                  <FormLabel>Título:</FormLabel>
+                  <FormInput
+                    type="text"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  />
+                </FormField>
+                <FormField>
+                  <FormLabel>Fecha y hora:</FormLabel>
+                  <FormInput
+                    type="datetime-local"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  />
+                </FormField>
+                <FormField>
+                  <FormLabel>Ubicación:</FormLabel>
+                  <FormInput
+                    type="text"
+                    value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  />
+                </FormField>
+                <FormField>
+                  <FormLabel>Póster del evento:</FormLabel>
+                  <RadioGroup>
+                    <label>
+                      <input
+                        type="radio"
+                        checked={posterType === 'upload'}
+                        onChange={() => {
+                          setPosterType('upload');
+                          setPreviewUrl('');
+                        }}
+                      />
+                      Subir nueva imagen (.webp, .jpg, .png)
+                    </label>
+                    <label>
+                      <input
+                        type="radio"
+                        checked={posterType === 'choose'}
+                        onChange={() => {
+                          setPosterType('choose');
+                          setPreviewUrl(`/event-posters/${selectedPoster}`);
+                        }}
+                      />
+                      Elegir existente
+                    </label>
+                  </RadioGroup>
+                  {posterType === 'upload' && (
+                    <FormInput
+                      type="file"
+                      accept=".webp,.png,.jpg,.jpeg"
+                      onChange={handlePosterFileChange}
                     />
-                    {sz}
-                  </label>
-                ))}
-              </RadioGroup>
-            </FormField>
-            <FormField>
-              <FormLabel>Imagen (.webp/.jpg/.png):</FormLabel>
-              <FormInput type="file" accept=".webp,.png,.jpg,.jpeg" onChange={handleMerchFileChange} />
-              {merchPreviewUrl && (<PosterPreview><img src={merchPreviewUrl} alt="preview" width={110} height={140}/></PosterPreview>)}
-            </FormField>
-            <SubmitButton type="submit" disabled={isUploadingMerch}>
-              {isUploadingMerch ? 'Subiendo...' : 'Añadir Producto'}
-            </SubmitButton>
-          </EventForm>
+                  )}
+                  {posterType === 'choose' && (
+                    <Select value={selectedPoster} onChange={handlePosterSelectChange}>
+                      {POSTER_CHOICES.map((name) => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
+                    </Select>
+                  )}
+                  {previewUrl && (
+                    <PosterPreview>
+                      <img src={previewUrl} alt="preview" width={110} height={140} />
+                    </PosterPreview>
+                  )}
+                </FormField>
+                <FormField>
+                  <FormLabel>Tipo de evento:</FormLabel>
+                  <Select
+                    value={customStatus}
+                    onChange={e => setCustomStatus(e.target.value as any)}
+                  >
+                    <option value="auto">Automático según fecha</option>
+                    <option value="upcoming">Forzar como Próximo (upcoming)</option>
+                    <option value="previous">Forzar como Anterior (previous)</option>
+                  </Select>
+                </FormField>
+                <SubmitButton type="submit" disabled={isUploading}>
+                  {isUploading ? 'Subiendo...' : 'Añadir Evento'}
+                </SubmitButton>
+              </EventForm>
+              {errorMessage && <FormError>{errorMessage}</FormError>}
+            </SectionAdmin>
 
-          <SectionTitleAdmin className={metalMania.className}>Productos Merch Existentes</SectionTitleAdmin>
-          {!Array.isArray(merch) || merch.length === 0 ? (
-            <p>No hay productos.</p>
-          ) : (
-            <EventsList>
-              {merch.map((p) => (
-                <EventItem key={p._id}>
-                  <EventInfoAdmin>
-                    <strong>{p.title}</strong> — {p.category} — ${p.price.toFixed(2)} — [ {p.sizes.join(', ')} ]
-                  </EventInfoAdmin>
-                  <DeleteButton onClick={() => handleDeleteMerch(p._id)}>Eliminar</DeleteButton>
-                </EventItem>
-              ))}
-            </EventsList>
-          )}
-        </SectionAdmin>
+            <SectionAdmin>
+              <SectionTitleAdmin className={metalMania.className}>Eventos Existentes</SectionTitleAdmin>
+              {!Array.isArray(events) || events.length === 0 ? (
+                <p>No hay eventos.</p>
+              ) : (
+                <EventsList>
+                  {events.map((evt) => (
+                    <EventItem key={evt._id}>
+                      <EventInfoAdmin>
+                        <strong>{evt.title}</strong> —{' '}
+                        {new Date(evt.date).toLocaleString('es-ES', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}{' '}
+                        — {evt.location} — <em>{evt.status}</em>
+                      </EventInfoAdmin>
+                      <DeleteButton onClick={() => handleDeleteEvent(evt._id)}>Eliminar</DeleteButton>
+                    </EventItem>
+                  ))}
+                </EventsList>
+              )}
+            </SectionAdmin>
+          </>
+        )}
+
+        {section === 'merch' && (
+          <>
+            <SectionAdmin>
+              <SectionTitleAdmin className={metalMania.className}>Agregar Producto Merch</SectionTitleAdmin>
+              <EventForm onSubmit={handleAddMerch} encType="multipart/form-data">
+                <FormField>
+                  <FormLabel>Título:</FormLabel>
+                  <FormInput value={merchForm.title} onChange={e => setMerchForm({ ...merchForm, title: e.target.value })} />
+                </FormField>
+                <FormField>
+                  <FormLabel>Descripción:</FormLabel>
+                  <FormInput value={merchForm.description} onChange={e => setMerchForm({ ...merchForm, description: e.target.value })} />
+                </FormField>
+                <FormField>
+                  <FormLabel>Precio:</FormLabel>
+                  <FormInput type="number" value={merchForm.price} onChange={e => setMerchForm({ ...merchForm, price: e.target.value })} />
+                </FormField>
+                <FormField>
+                  <FormLabel>Categoría:</FormLabel>
+                  <FormInput value={merchForm.category} onChange={e => setMerchForm({ ...merchForm, category: e.target.value })} />
+                </FormField>
+                <FormField>
+                  <FormLabel>Tallas disponibles:</FormLabel>
+                  <RadioGroup>
+                    {['S','M','L','XL'].map(sz => (
+                      <label key={sz}>
+                        <input
+                          type="checkbox"
+                          checked={merchForm.sizes.includes(sz)}
+                          onChange={e => {
+                            const next = e.target.checked
+                              ? [...merchForm.sizes, sz]
+                              : merchForm.sizes.filter(s => s !== sz);
+                            setMerchForm({ ...merchForm, sizes: next });
+                          }}
+                        />
+                        {sz}
+                      </label>
+                    ))}
+                  </RadioGroup>
+                </FormField>
+                <FormField>
+                  <FormLabel>Imagen (.webp/.jpg/.png):</FormLabel>
+                  <FormInput type="file" accept=".webp,.png,.jpg,.jpeg" onChange={handleMerchFileChange} />
+                  {merchPreviewUrl && (<PosterPreview><img src={merchPreviewUrl} alt="preview" width={110} height={140}/></PosterPreview>)}
+                </FormField>
+                <SubmitButton type="submit" disabled={isUploadingMerch}>
+                  {isUploadingMerch ? 'Subiendo...' : 'Añadir Producto'}
+                </SubmitButton>
+              </EventForm>
+
+              <SectionTitleAdmin className={metalMania.className}>Productos Merch Existentes</SectionTitleAdmin>
+              {!Array.isArray(merch) || merch.length === 0 ? (
+                <p>No hay productos.</p>
+              ) : (
+                <EventsList>
+                  {merch.map((p) => (
+                    <EventItem key={p._id}>
+                      <EventInfoAdmin>
+                        <strong>{p.title}</strong> — {p.category} — ${p.price.toFixed(2)} — [ {p.sizes.join(', ')} ]
+                      </EventInfoAdmin>
+                      <DeleteButton onClick={() => handleDeleteMerch(p._id)}>Eliminar</DeleteButton>
+                    </EventItem>
+                  ))}
+                </EventsList>
+              )}
+            </SectionAdmin>
+          </>
+        )}
+        {/* ======================= MEDIA ======================= */}
+        {section === 'media' && (
+          <>
+            <SectionAdmin>
+              <SectionTitleAdmin className={metalMania.className}>Video Destacado (YouTube)</SectionTitleAdmin>
+              <EventForm onSubmit={handleUpdateVideo}>
+                <FormField>
+                  <FormLabel>URL de YouTube (embed o normal):</FormLabel>
+                  <FormInput value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} />
+                </FormField>
+                <SubmitButton type="submit" disabled={isUpdatingVideo}>
+                  {isUpdatingVideo ? 'Guardando...' : 'Guardar Video'}
+                </SubmitButton>
+              </EventForm>
+            </SectionAdmin>
+
+            <SectionAdmin>
+              <SectionTitleAdmin className={metalMania.className}>Agregar Foto a Galería</SectionTitleAdmin>
+              <EventForm onSubmit={handleAddPhoto} encType="multipart/form-data">
+                <FormField>
+                  <FormLabel>Imagen (.webp/.jpg/.png):</FormLabel>
+                  <FormInput type="file" accept=".webp,.png,.jpg,.jpeg" onChange={handlePhotoFileChange} />
+                  {photoPreview && (
+                    <PosterPreview>
+                      <img src={photoPreview} alt="preview" width={110} height={110} />
+                    </PosterPreview>
+                  )}
+                </FormField>
+                <FormField>
+                  <FormLabel>Alt / Descripción corta (opcional):</FormLabel>
+                  <FormInput value={photoAlt} onChange={(e) => setPhotoAlt(e.target.value)} />
+                </FormField>
+                <SubmitButton type="submit" disabled={isUploadingPhoto}>
+                  {isUploadingPhoto ? 'Subiendo...' : 'Añadir Foto'}
+                </SubmitButton>
+              </EventForm>
+
+              <SectionTitleAdmin className={metalMania.className}>Galería Existente</SectionTitleAdmin>
+              {!Array.isArray(photos) || photos.length === 0 ? (
+                <p>No hay fotos.</p>
+              ) : (
+                <EventsList>
+                  {photos.map((ph) => (
+                    <EventItem key={ph._id}>
+                      <EventInfoAdmin>
+                        <img src={ph.url} alt="thumb" width={50} style={{ marginRight: '0.5rem' }} />
+                        {ph.alt || 'Sin descripción'}
+                      </EventInfoAdmin>
+                      <DeleteButton onClick={() => handleDeletePhoto(ph._id)}>Eliminar</DeleteButton>
+                    </EventItem>
+                  ))}
+                </EventsList>
+              )}
+            </SectionAdmin>
+          </>
+        )}
       </AdminWrapper>
     </>
   );
@@ -550,6 +737,7 @@ const AdminWrapper = styled.div`
   min-height: 100vh;
   background-color: #181818;
   color: #eee;
+  padding: 2rem;
 `;
 
 const HeaderAdmin = styled.header`
@@ -689,6 +877,8 @@ const EventItem = styled.li`
 `;
 
 const EventInfoAdmin = styled.div`
+  display: flex;
+  align-items: center;
   color: #ddd;
   font-size: 0.95rem;
   strong { color: #eee; }
@@ -704,4 +894,26 @@ const DeleteButton = styled.button`
   cursor: pointer;
   transition: background 0.2s;
   &:hover { background: #b00909; }
+`;
+const TabBar = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+`;
+
+const TabButton = styled.button<{ $active: boolean }>`
+  padding: 0.6rem 1.4rem;
+  background: ${({ $active }) => ($active ? '#f31212' : '#1f1f1f')};
+  color: ${({ $active }) => ($active ? '#111' : '#eee')};
+  border: 2px solid #f31212;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.25s, color 0.25s;
+
+  &:hover {
+    background: #f31212;
+    color: #111;
+  }
 `;
