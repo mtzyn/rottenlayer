@@ -9,9 +9,10 @@ import Particles, { initParticlesEngine } from '@tsparticles/react';
 import { loadFull } from 'tsparticles';
 import Link from 'next/link';
 
-function ensureArray(data: any) {
-  return Array.isArray(data) ? data : [];
-}
+
+/** Garantiza que cualquier json devuelto sea siempre un array */
+const toArray = <T,>(data: unknown): T[] =>
+  Array.isArray(data) ? (data as T[]) : [];
 
 // Tipado para los eventos
 interface Event {
@@ -50,37 +51,28 @@ export default function GigsPage() {
   // Estado de error de fetch
   const [fetchError, setFetchError] = useState(false);
 
-  // Cargar datos de la API una vez al montar
+  // Cargar datos una sola vez
   useEffect(() => {
-    fetch('/api/events?status=upcoming', { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setUpcoming(data);
-        } else {
-          setUpcoming([]);
-          setFetchError(true);
-        }
-      })
-      .catch(() => {
-        setUpcoming([]);
-        setFetchError(true);
-      });
+    const fetchData = async () => {
+      try {
+        const [upRes, prevRes] = await Promise.all([
+          fetch('/api/events?status=upcoming'),
+          fetch('/api/events?status=previous'),
+        ]);
 
-    fetch('/api/events?status=previous', { cache: 'no-store' })
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          setPrevious(data);
-        } else {
-          setPrevious([]);
-          setFetchError(true);
-        }
-      })
-      .catch(() => {
-        setPrevious([]);
+        const upData: Event[]   = toArray<Event>(await upRes.json());
+        const prevData: Event[] = toArray<Event>(await prevRes.json());
+
+        setUpcoming(upData);
+        setPrevious(prevData);
+      } catch {
         setFetchError(true);
-      });
+        setUpcoming([]);
+        setPrevious([]);
+      }
+    };
+
+    fetchData();
   }, []);
 
   // Inicializar partículas en el cliente
@@ -159,11 +151,13 @@ export default function GigsPage() {
           <Section>
             <SectionTitle className={metalMania.className}>Upcoming Event</SectionTitle>
             {fetchError ? (
-              <p style={{ color: '#f31212' }}>Error al cargar los eventos. Intenta de nuevo más tarde.</p>
-            ) : !Array.isArray(upcoming) || upcoming.length === 0 ? (
+              <p style={{ color: '#f31212' }}>
+                Error al cargar los eventos. Intenta de nuevo más tarde.
+              </p>
+            ) : upcoming.length === 0 ? (
               <p>There are no upcoming events.</p>
             ) : (
-              upcoming.map((evt: Event) => (
+              upcoming.map((evt) => (
                 <EventCard key={evt._id}>
                   <PosterWrapper>
                     <Image
@@ -210,10 +204,10 @@ export default function GigsPage() {
             <EventsGrid>
               {fetchError ? (
                 <p style={{ color: '#f31212' }}>Error al cargar los eventos.</p>
-              ) : !Array.isArray(previous) || previous.length === 0 ? (
+              ) : previous.length === 0 ? (
                 <p>No hay eventos anteriores.</p>
               ) : (
-                previous.map((gig: Event) => (
+                previous.map((gig) => (
                   <GigCard key={gig._id}>
                     <GigPoster>
                       <Image
