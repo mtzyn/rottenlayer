@@ -27,11 +27,26 @@ const NAV_LINKS = [
 export default function BandPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [init, setInit] = useState(false);
+  const [event, setEvent] = useState<any | null>(null);
 
   useEffect(() => {
     initParticlesEngine(async (engine) => {
       await loadFull(engine);
     }).then(() => setInit(true));
+
+    const fetchEvent = async () => {
+      try {
+        const res = await fetch('/api/events?status=upcoming');
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setEvent(data[0]);
+        }
+      } catch (err) {
+        console.error('Failed to load event:', err);
+      }
+    };
+
+    fetchEvent();
   }, []);
 
   const particlesOptions: any = {
@@ -55,24 +70,29 @@ export default function BandPage() {
     background: { color: "" }
   };
 
-  // Función para compartir el evento usando Web Share API o copiar al portapapeles
-  const handleShare = () => {
-    const shareData = {
-      title: 'Rötten Layer – Upcoming Event',
-      text: 'Join us on July 5, 2025 at Puntarenas · Copas Bar y Cevichera!',
-      url: window.location.href
+  const handleAddToCalendar = () => {
+    if (!event) return;
+
+    const startDate = new Date(event.date);
+    const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000); // 2 hours later
+
+    const formatDate = (d: Date) =>
+      d.toISOString().replace(/[-:]|\.\d{3}/g, '').slice(0, 15) + 'Z';
+
+    const details = {
+      text: event.title,
+      dates: `${formatDate(startDate)}/${formatDate(endDate)}`,
+      details: `Join us at ${event.location}`,
+      location: event.location,
     };
 
-    if (navigator.share) {
-      navigator
-        .share(shareData)
-        .catch((err) => console.error('Error sharing:', err));
-    } else {
-      navigator.clipboard
-        .writeText(shareData.url)
-        .then(() => alert('Link copied to clipboard!'))
-        .catch((err) => console.error('Error copying link:', err));
-    }
+    const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+      details.text
+    )}&dates=${details.dates}&details=${encodeURIComponent(
+      details.details
+    )}&location=${encodeURIComponent(details.location)}`;
+
+    window.open(url, '_blank');
   };
 
   return (
@@ -206,28 +226,31 @@ export default function BandPage() {
         <Section>
           <SectionTitle className={metalMania.className}>Upcoming Event</SectionTitle>
           <SectionBox>
-            <EventCard>
-              <PosterFrame>
-                <Image
-                  src="/EventoMantra.jpeg"
-                  alt="Poster Evento junto a Mantra"
-                  width={300}
-                  height={450}
-                  style={{ objectFit: 'contain', borderRadius: '4px' }}
-                  priority
-                />
-              </PosterFrame>
-
-              <EventInfo>
-                <DetailItem>
-                  <strong>Date:</strong> July 5, 2025
-                </DetailItem>
-                <DetailItem>
-                  <strong>Location:</strong> Puntarenas · Copas Bar y Cevichera
-                </DetailItem>
-                <ShareButton onClick={handleShare}>Share Event</ShareButton>
-              </EventInfo>
-            </EventCard>
+            {event ? (
+              <EventCard>
+                <PosterFrame>
+                  <Image
+                    src={event.posterUrl}
+                    alt={`Poster for ${event.title}`}
+                    width={300}
+                    height={450}
+                    style={{ objectFit: 'contain', borderRadius: '4px' }}
+                    priority
+                  />
+                </PosterFrame>
+                <EventInfo>
+                  <DetailItem>
+                    <strong>Date:</strong> {new Date(event.date).toLocaleDateString()}
+                  </DetailItem>
+                  <DetailItem>
+                    <strong>Location:</strong> {event.location}
+                  </DetailItem>
+                  <ShareButton onClick={handleAddToCalendar}>Add to Calendar</ShareButton>
+                </EventInfo>
+              </EventCard>
+            ) : (
+              <Paragraph>No upcoming event available at this time.</Paragraph>
+            )}
           </SectionBox>
         </Section>
 

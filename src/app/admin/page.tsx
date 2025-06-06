@@ -18,6 +18,16 @@ interface Event {
   status: 'upcoming' | 'previous';
 }
 
+interface MerchItem {
+  _id: string;
+  title: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  category: string;
+  sizes: string[];
+}
+
 const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY || 'admin123';
 const POSTER_CHOICES = [
   'EventoMantra.jpeg', 'MetalSouls.webp', 'AZKABAN.webp', 'SemanaU.webp',
@@ -49,10 +59,24 @@ export default function AdminPage() {
   const [selectedPoster, setSelectedPoster] = useState<string>(POSTER_CHOICES[0]);
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [isUploading, setIsUploading] = useState(false);
+  const [merch, setMerch] = useState<MerchItem[]>([]);
+  const [merchForm, setMerchForm] = useState({
+    title: '',
+    description: '',
+    price: '',
+    category: '',
+    sizes: [] as string[],
+  });
+  const [merchPosterFile, setMerchPosterFile] = useState<File | null>(null);
+  const [merchPreviewUrl, setMerchPreviewUrl] = useState<string>('');
+  const [isUploadingMerch, setIsUploadingMerch] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    if (authenticated) fetchEvents();
+    if (authenticated) {
+      fetchEvents();
+      fetchMerch();
+    }
   }, [authenticated]);
 
   async function fetchEvents() {
@@ -63,6 +87,17 @@ export default function AdminPage() {
     } catch (err) {
       console.error('Error fetching events:', err);
       setEvents([]);                     // evita objeto inesperado
+    }
+  }
+
+  async function fetchMerch() {
+    try {
+      const res = await fetch('/api/merch', { cache: 'no-store' });
+      const data = await res.json();
+      setMerch(toArray<MerchItem>(data));
+    } catch (err) {
+      console.error('Error fetching merch:', err);
+      setMerch([]);
     }
   }
 
@@ -81,6 +116,65 @@ export default function AdminPage() {
     const file = e.target.files?.[0] || null;
     setPosterFile(file);
     setPreviewUrl(file ? URL.createObjectURL(file) : '');
+  }
+
+  function handleMerchFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] || null;
+    setMerchPosterFile(file);
+    setMerchPreviewUrl(file ? URL.createObjectURL(file) : '');
+  }
+  async function handleAddMerch(e: FormEvent) {
+    e.preventDefault();
+    const { title, description, price, category, sizes } = merchForm;
+    if (!title || !description || !price || !category || !merchPosterFile) {
+      setErrorMessage('Completa todos los campos de MERCH');
+      return;
+    }
+    setIsUploadingMerch(true);
+
+    // upload image
+    const fd = new FormData();
+    fd.append('file', merchPosterFile);
+    const upRes = await fetch('/api/upload', { method: 'POST', body: fd });
+    if (!upRes.ok) {
+      setErrorMessage('Error al subir imagen de merch');
+      setIsUploadingMerch(false);
+      return;
+    }
+    const { url } = await upRes.json();
+
+    const body = { title, description, price: Number(price), category, sizes, imageUrl: url };
+    try {
+      const res = await fetch('/api/merch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        setMerchForm({ title: '', description: '', price: '', category: '', sizes: [] });
+        setMerchPosterFile(null);
+        setMerchPreviewUrl('');
+        fetchMerch();
+        setErrorMessage('');
+      } else {
+        const errJson = await res.json();
+        setErrorMessage(errJson.message || 'Error al agregar producto');
+      }
+    } catch {
+      setErrorMessage('Error de red al agregar producto');
+    }
+    setIsUploadingMerch(false);
+  }
+
+  async function handleDeleteMerch(id: string) {
+    if (!confirm('¿Eliminar este producto?')) return;
+    try {
+      const res = await fetch(`/api/merch?id=${id}`, { method: 'DELETE' });
+      if (res.ok) fetchMerch();
+      else alert('Error al eliminar producto');
+    } catch {
+      alert('Error de red al eliminar producto');
+    }
   }
 
   function handlePosterSelectChange(e: ChangeEvent<HTMLSelectElement>) {
@@ -173,6 +267,10 @@ export default function AdminPage() {
     setPreviewUrl('');
     setIsUploading(false);
     setEvents([]);
+    setMerch([]);
+    setMerchForm({ title: '', description: '', price: '', category: '', sizes: [] });
+    setMerchPosterFile(null);
+    setMerchPreviewUrl('');
   }
 
   if (!authenticated) {
@@ -316,6 +414,72 @@ export default function AdminPage() {
                     — {evt.location} — <em>{evt.status}</em>
                   </EventInfoAdmin>
                   <DeleteButton onClick={() => handleDeleteEvent(evt._id)}>Eliminar</DeleteButton>
+                </EventItem>
+              ))}
+            </EventsList>
+          )}
+        </SectionAdmin>
+
+        <SectionAdmin>
+          <SectionTitleAdmin className={metalMania.className}>Agregar Producto Merch</SectionTitleAdmin>
+          <EventForm onSubmit={handleAddMerch} encType="multipart/form-data">
+            <FormField>
+              <FormLabel>Título:</FormLabel>
+              <FormInput value={merchForm.title} onChange={e => setMerchForm({ ...merchForm, title: e.target.value })} />
+            </FormField>
+            <FormField>
+              <FormLabel>Descripción:</FormLabel>
+              <FormInput value={merchForm.description} onChange={e => setMerchForm({ ...merchForm, description: e.target.value })} />
+            </FormField>
+            <FormField>
+              <FormLabel>Precio:</FormLabel>
+              <FormInput type="number" value={merchForm.price} onChange={e => setMerchForm({ ...merchForm, price: e.target.value })} />
+            </FormField>
+            <FormField>
+              <FormLabel>Categoría:</FormLabel>
+              <FormInput value={merchForm.category} onChange={e => setMerchForm({ ...merchForm, category: e.target.value })} />
+            </FormField>
+            <FormField>
+              <FormLabel>Tallas disponibles:</FormLabel>
+              <RadioGroup>
+                {['S','M','L','XL'].map(sz => (
+                  <label key={sz}>
+                    <input
+                      type="checkbox"
+                      checked={merchForm.sizes.includes(sz)}
+                      onChange={e => {
+                        const next = e.target.checked
+                          ? [...merchForm.sizes, sz]
+                          : merchForm.sizes.filter(s => s !== sz);
+                        setMerchForm({ ...merchForm, sizes: next });
+                      }}
+                    />
+                    {sz}
+                  </label>
+                ))}
+              </RadioGroup>
+            </FormField>
+            <FormField>
+              <FormLabel>Imagen (.webp/.jpg/.png):</FormLabel>
+              <FormInput type="file" accept=".webp,.png,.jpg,.jpeg" onChange={handleMerchFileChange} />
+              {merchPreviewUrl && (<PosterPreview><img src={merchPreviewUrl} alt="preview" width={110} height={140}/></PosterPreview>)}
+            </FormField>
+            <SubmitButton type="submit" disabled={isUploadingMerch}>
+              {isUploadingMerch ? 'Subiendo...' : 'Añadir Producto'}
+            </SubmitButton>
+          </EventForm>
+
+          <SectionTitleAdmin className={metalMania.className}>Productos Merch Existentes</SectionTitleAdmin>
+          {!Array.isArray(merch) || merch.length === 0 ? (
+            <p>No hay productos.</p>
+          ) : (
+            <EventsList>
+              {merch.map((p) => (
+                <EventItem key={p._id}>
+                  <EventInfoAdmin>
+                    <strong>{p.title}</strong> — {p.category} — ${p.price.toFixed(2)} — [ {p.sizes.join(', ')} ]
+                  </EventInfoAdmin>
+                  <DeleteButton onClick={() => handleDeleteMerch(p._id)}>Eliminar</DeleteButton>
                 </EventItem>
               ))}
             </EventsList>
