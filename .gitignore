@@ -1,4 +1,6 @@
-# Node modules y build
+# ------------------------------------------
+# Dependencias y compilación
+# ------------------------------------------
 node_modules/
 .next/
 out/
@@ -6,11 +8,23 @@ dist/
 build/
 coverage/
 
-# Archivos de entorno
-.env*
+# ------------------------------------------
+# Archivos de entorno (solo los locales)
+# ------------------------------------------
+# Ignorar únicamente los .env.* locales.
+# No hacemos “.env*” porque queremos que .env (si lo usas como ejemplo o valores por defecto) 
+# permanezca en el repo. 
+.env.local
+.env.development.local
+.env.production.local
+.env.test.local
+
+# Permitir que .env.example esté versionado
 !.env.example
 
-# Archivos de sistema
+# ------------------------------------------
+# Archivos de sistema y editor
+# ------------------------------------------
 .DS_Store
 Thumbs.db
 
@@ -20,23 +34,25 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Editor y config
+# Configuraciones de IDE/editor
 .vscode/
 .idea/
 *.swp
 
-# MacOS y Linux
+# MacOS y Linux específicos
 *.sublime-workspace
 *.sublime-project
 
-# Otros archivos que no quieres subir
-*.local
+# Otros archivos que no quieras subir
 *.log
 
-# Optional: next/image cache
+# ------------------------------------------
+# Cachés opcionales de Next.js o frameworks
+# ------------------------------------------
+# next/image cache
 public/cache/
 .cache/
 
-# Optional: vercel y netlify
+# Plataformas de despliegue
 .vercel/
 .netlify/

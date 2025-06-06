@@ -1,16 +1,16 @@
 const isGithubPages = process.env.GITHUB_PAGES === 'true';
 
 const nextConfig = {
-  output: 'export',
+  // Quita el modo export, así habilitas el backend/API:
+  // output: 'export',   // <-- NO usar si quieres panel admin/BD/API
+
   basePath: isGithubPages ? '/rottenlayer' : '',
   assetPrefix: isGithubPages ? '/rottenlayer/' : '',
 
-  // Habilitamos styled-components para build estático:
   compiler: {
     styledComponents: true
   },
 
-  // Desactivamos Image Optimization en export:
   images: {
     unoptimized: true
   }

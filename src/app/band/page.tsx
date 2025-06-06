@@ -238,7 +238,7 @@ export default function BandPage() {
             <SocialList>
               <SocialItem>
                 <SocialIconLink
-                  href="https://www.instagram.com/rottenlayer"
+                  href="https://www.instagram.com/rottenlayer_?igsh=MWJqc3ptZHZxc3lz&utm_source=qr"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -247,7 +247,7 @@ export default function BandPage() {
               </SocialItem>
               <SocialItem>
                 <SocialIconLink
-                  href="https://www.facebook.com/rottenlayer"
+                  href="https://www.facebook.com/share/15UvGqJcJv/?mibextid=wwXIfr"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -256,7 +256,7 @@ export default function BandPage() {
               </SocialItem>
               <SocialItem>
                 <SocialIconLink
-                  href="https://www.tiktok.com/@rottenlayer_"
+                  href="https://www.tiktok.com/@rottenlayer?_t=ZM-8wxo4LYwdVu&_r=1"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -265,7 +265,7 @@ export default function BandPage() {
               </SocialItem>
               <SocialItem>
                 <SocialIconLink
-                  href="https://www.youtube.com/@rottenlayer_"
+                  href="https://youtu.be/hnW4fny7aq8?si=359FMEUKr2VveQgg"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -343,7 +343,7 @@ const DarkOverlay = styled.div`
 
 const Header = styled.header`
   width: 100%;
-  height: 70px;
+  height: 60px;
   position: fixed;
   top: 0;
   left: 0;
@@ -354,6 +354,9 @@ const Header = styled.header`
   justify-content: space-between;
   z-index: 10;
   border-bottom: 1px solid rgba(60, 60, 60, 0.12);
+  @media (max-width: 500px) {
+    height: 50px;
+  }
 `;
 
 const LogoLink = styled(Link)`
@@ -366,6 +369,13 @@ const LogoLink = styled(Link)`
     width: 82px;
     height: 82px;
     object-fit: contain;
+  }
+
+  @media (max-width: 500px) {
+    img {
+      width: 60px;
+      height: 60px;
+    }
   }
 `;
 
@@ -442,7 +452,7 @@ const NavLink = styled(Link)`
 
   @media (max-width: 900px) {
     display: block;
-    padding: 0.7rem 1.8rem;
+    padding: 0.7rem 1rem;
     font-weight: 600;
     letter-spacing: 0.03em;
     font-size: 1.05rem;
@@ -463,12 +473,16 @@ const ContentContainer = styled.main`
   position: relative;
   z-index: 2;
   padding-top: 120px;     /* Espacio para navbar */
-  max-width: 900px;       /* Un poco más ancho para cards */
+  max-width: 1000px;      /* Un poco más ancho para cards */
   margin: 0 auto;
   padding-left: 1rem;
   padding-right: 1rem;
   padding-bottom: 4rem;   /* Más espacio abajo */
   text-align: center;
+  @media (max-width: 600px) {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
 `;
 
 const HeroSection = styled.section`
@@ -476,7 +490,7 @@ const HeroSection = styled.section`
 `;
 
 const HeroTitle = styled.h1`
-  font-size: 4rem;
+  font-size: clamp(2rem, 8vw, 4rem);
   font-weight: 400;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -486,7 +500,7 @@ const HeroTitle = styled.h1`
 `;
 
 const HeroSubtitle = styled.p`
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 5vw, 2rem);
   font-weight: 400;
   opacity: 0.8;
 `;
@@ -496,7 +510,7 @@ const Section = styled.section`
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 3rem;
+  font-size: clamp(2rem, 6vw, 3rem);
   font-weight: 400;
   margin-bottom: 1.5rem;
   letter-spacing: 0.06em;
@@ -527,6 +541,9 @@ const MembersGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 2rem;
   justify-items: center;
+  @media (max-width: 500px) {
+    gap: 1rem;
+  }
 `;
 
 const MemberCard = styled.div`
@@ -534,15 +551,17 @@ const MemberCard = styled.div`
   border: 2px solid #f31212;
   border-radius: 6px;
   padding: 1rem;
-  width: 180px;            /* Ajustado para contener la imagen + texto */
+  width: 100%;
+  max-width: 180px;        /* Ajustado para contener la imagen + texto */
   text-align: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
 `;
 
 const CardImageWrapper = styled.div`
   position: relative;
-  width: 160px;            /* Especificado por el usuario */
-  height: 180px;           /* Especificado por el usuario */
+  width: 100%;
+  max-width: 160px;
+  aspect-ratio: 160 / 180;
   margin: 0 auto 0.8rem;
   overflow: hidden;
   border-radius: 4px;
@@ -582,23 +601,27 @@ const PosterFrame = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;          /* Fondo negro puro para que resalte el póster */
+  background: #000; /* keep background */
   border: 2px solid #333;
   border-radius: 4px;
-  width: 300px;              /* Ancho fijo del póster */
-  height: 200px;             /* Alto fijo del póster */
+  width: 100%;
+  max-width: 300px;
+  aspect-ratio: 2 / 3;
   overflow: hidden;
 `;
 
 const EventInfo = styled.div`
   margin-top: 2rem;           /* Separación en pantallas pequeñas */
   text-align: center;
-  max-width: 300px;           /* Limita ancho en desktop para mantener proporciones */
+  max-width: 100%;
 
   @media (min-width: 600px) {
     margin-top: 0;
     margin-left: 2rem;       /* Espacio a la izquierda del póster */
     text-align: left;
+  }
+  @media (max-width: 600px) {
+    margin-left: 0;
   }
 `;
 
@@ -636,6 +659,9 @@ const SocialList = styled.ul`
   gap: 2.5rem;
   list-style: none;
   padding: 0;
+  @media (max-width: 400px) {
+    gap: 1rem;
+  }
 `;
 
 const SocialItem = styled.li``;
