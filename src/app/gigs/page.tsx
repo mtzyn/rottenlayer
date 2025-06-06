@@ -9,6 +9,10 @@ import Particles, { initParticlesEngine } from '@tsparticles/react';
 import { loadFull } from 'tsparticles';
 import Link from 'next/link';
 
+function ensureArray(data: any) {
+  return Array.isArray(data) ? data : [];
+}
+
 // Tipado para los eventos
 interface Event {
   _id: string;
@@ -43,18 +47,26 @@ export default function GigsPage() {
 
   // Estado para menú hamburguesa
   const [menuOpen, setMenuOpen] = useState(false);
+  // Estado de error de fetch
+  const [fetchError, setFetchError] = useState(false);
 
   // Cargar datos de la API una vez al montar
   useEffect(() => {
     fetch('/api/events?status=upcoming', { cache: 'no-store' })
       .then((res) => res.json())
-      .then((data: Event[]) => setUpcoming(data))
-      .catch(() => setUpcoming([]));
+      .then((data) => setUpcoming(ensureArray(data)))
+      .catch(() => {
+        setUpcoming([]);
+        setFetchError(true);
+      });
 
     fetch('/api/events?status=previous', { cache: 'no-store' })
       .then((res) => res.json())
-      .then((data: Event[]) => setPrevious(data))
-      .catch(() => setPrevious([]));
+      .then((data) => setPrevious(ensureArray(data)))
+      .catch(() => {
+        setPrevious([]);
+        setFetchError(true);
+      });
   }, []);
 
   // Inicializar partículas en el cliente
@@ -132,7 +144,9 @@ export default function GigsPage() {
           {/* ===== Upcoming Event ===== */}
           <Section>
             <SectionTitle className={metalMania.className}>Upcoming Event</SectionTitle>
-            {upcoming.length === 0 ? (
+            {fetchError ? (
+              <p style={{ color: '#f31212' }}>Error al cargar los eventos. Intenta de nuevo más tarde.</p>
+            ) : upcoming.length === 0 ? (
               <p>There are no upcoming events.</p>
             ) : (
               upcoming.map((evt: Event) => (
@@ -180,7 +194,9 @@ export default function GigsPage() {
           <Section>
             <SectionTitle className={metalMania.className}>Previous Events</SectionTitle>
             <EventsGrid>
-              {previous.length === 0 ? (
+              {fetchError ? (
+                <p style={{ color: '#f31212' }}>Error al cargar los eventos.</p>
+              ) : previous.length === 0 ? (
                 <p>No hay eventos anteriores.</p>
               ) : (
                 previous.map((gig: Event) => (
