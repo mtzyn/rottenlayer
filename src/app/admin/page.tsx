@@ -5,6 +5,10 @@ import styled, { createGlobalStyle } from 'styled-components';
 import { Oswald, Metal_Mania } from 'next/font/google';
 import { useRouter } from 'next/navigation';
 
+/** Convierte cualquier JSON en un array seguro */
+const toArray = <T,>(data: unknown): T[] =>
+  Array.isArray(data) ? (data as T[]) : [];
+
 interface Event {
   _id: string;
   title: string;
@@ -54,10 +58,11 @@ export default function AdminPage() {
   async function fetchEvents() {
     try {
       const res = await fetch('/api/events', { cache: 'no-store' });
-      const data: Event[] = await res.json();
-      setEvents(data);
+      const data = await res.json();
+      setEvents(toArray<Event>(data));   // siempre array, aun si backend falla
     } catch (err) {
       console.error('Error fetching events:', err);
+      setEvents([]);                     // evita objeto inesperado
     }
   }
 
@@ -293,7 +298,7 @@ export default function AdminPage() {
 
         <SectionAdmin>
           <SectionTitleAdmin className={metalMania.className}>Eventos Existentes</SectionTitleAdmin>
-          {events.length === 0 ? (
+          {!Array.isArray(events) || events.length === 0 ? (
             <p>No hay eventos.</p>
           ) : (
             <EventsList>
