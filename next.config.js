@@ -1,9 +1,7 @@
 const isGithubPages = process.env.GITHUB_PAGES === 'true';
 
 const nextConfig = {
-  // Quita el modo export, así habilitas el backend/API:
-  // output: 'export',   // <-- NO usar si quieres panel admin/BD/API
-
+  // NO PONGAS output: 'export', así Next.js usa backend/API en Vercel
   basePath: isGithubPages ? '/rottenlayer' : '',
   assetPrefix: isGithubPages ? '/rottenlayer/' : '',
 
