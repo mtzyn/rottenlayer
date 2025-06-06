@@ -54,7 +54,14 @@ export default function GigsPage() {
   useEffect(() => {
     fetch('/api/events?status=upcoming', { cache: 'no-store' })
       .then((res) => res.json())
-      .then((data) => setUpcoming(ensureArray(data)))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setUpcoming(data);
+        } else {
+          setUpcoming([]);
+          setFetchError(true);
+        }
+      })
       .catch(() => {
         setUpcoming([]);
         setFetchError(true);
@@ -62,7 +69,14 @@ export default function GigsPage() {
 
     fetch('/api/events?status=previous', { cache: 'no-store' })
       .then((res) => res.json())
-      .then((data) => setPrevious(ensureArray(data)))
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setPrevious(data);
+        } else {
+          setPrevious([]);
+          setFetchError(true);
+        }
+      })
       .catch(() => {
         setPrevious([]);
         setFetchError(true);
@@ -146,7 +160,7 @@ export default function GigsPage() {
             <SectionTitle className={metalMania.className}>Upcoming Event</SectionTitle>
             {fetchError ? (
               <p style={{ color: '#f31212' }}>Error al cargar los eventos. Intenta de nuevo más tarde.</p>
-            ) : upcoming.length === 0 ? (
+            ) : !Array.isArray(upcoming) || upcoming.length === 0 ? (
               <p>There are no upcoming events.</p>
             ) : (
               upcoming.map((evt: Event) => (
@@ -196,7 +210,7 @@ export default function GigsPage() {
             <EventsGrid>
               {fetchError ? (
                 <p style={{ color: '#f31212' }}>Error al cargar los eventos.</p>
-              ) : previous.length === 0 ? (
+              ) : !Array.isArray(previous) || previous.length === 0 ? (
                 <p>No hay eventos anteriores.</p>
               ) : (
                 previous.map((gig: Event) => (
