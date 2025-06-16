@@ -7,7 +7,7 @@ import styled from 'styled-components';
 import { Oswald } from 'next/font/google';
 import { Metal_Mania } from 'next/font/google';
 import { fadeSlideUp, ctaGlow, bgPulse, textGlow } from './animations';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Particles, { initParticlesEngine } from '@tsparticles/react';
 import { loadFull } from 'tsparticles';
 
@@ -109,6 +109,28 @@ const NAV_LINKS = [
   { label: 'Contact', href: '/contact' },
 ];
 
+const MotionNavLink = motion(NavLink);
+const MotionNavList = motion(NavList);
+
+const navIconVariants = {
+  initial: { opacity: 0, scale: 0.5, rotate: -90 },
+  animate: { opacity: 1, scale: 1, rotate: 0, transition: { duration: 0.2 } },
+  exit: { opacity: 0, scale: 0.5, rotate: 90, transition: { duration: 0.2 } },
+};
+
+const mobileMenuVariants = {
+  closed: {
+    opacity: 0,
+    x: "100%",
+    transition: { type: "tween", duration: 0.3, ease: "easeIn" }
+  },
+  open: {
+    opacity: 1,
+    x: 0,
+    transition: { type: "tween", duration: 0.3, ease: "easeOut" }
+  }
+};
+
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [init, setInit] = useState(false);
@@ -184,13 +206,45 @@ export default function HomePage() {
           </LogoLink>
           <Nav>
             <NavToggle onClick={() => setMenuOpen((prev) => !prev)}>
-              {menuOpen ? '✕' : '☰'}
+              <AnimatePresence mode="wait" initial={false}>
+                {menuOpen ? (
+                  <motion.span
+                    key="close"
+                    variants={navIconVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                  >
+                    ✕
+                  </motion.span>
+                ) : (
+                  <motion.span
+                    key="open"
+                    variants={navIconVariants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                  >
+                    ☰
+                  </motion.span>
+                )}
+              </AnimatePresence>
             </NavToggle>
 
-            <NavList className={menuOpen ? 'open' : ''}>
+            <MotionNavList
+              className={menuOpen ? 'open' : ''}
+              initial={false} // Already hidden by CSS or will be animated from 'closed'
+              animate={menuOpen ? "open" : "closed"}
+              variants={mobileMenuVariants}
+            >
               {NAV_LINKS.map(({ label, href }) => (
                 <li key={label}>
-                  <NavLink href={href}>{label}</NavLink>
+                  <MotionNavLink
+                    href={href}
+                    whileHover={{ translateY: -2, scale: 1.05 }}
+                  >
+                    {label}
+                  </MotionNavLink>
                 </li>
               ))}
             </NavList>
@@ -220,11 +274,14 @@ export default function HomePage() {
                   Rötten Layer is a thrash metal band from Costa Rica.
                 </Tagline>
               </AnimatedHeroPhrase>
-              <CtaButton
+              <AnimatedCtaButton
                 href="/contact"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut", delay: 1.5 }}
               >
                 Contact Us
-              </CtaButton>
+              </AnimatedCtaButton>
             </HeroContent>
           </Hero>
         </Container>
@@ -315,9 +372,9 @@ const NavList = styled.ul`
   box-shadow: 0 6px 30px 0 rgba(0, 0, 0, 0.21);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
-  overflow: hidden;
+  overflow: hidden; /* Keep this to clip content during animation */
   padding: 0.7rem 0;
-  transition: all 0.3s ease;
+  /* transition: all 0.3s ease; Removed to let Framer Motion handle it */
 
   &.open {
     display: flex;
@@ -333,7 +390,7 @@ const NavList = styled.ul`
     border-radius: 0;
     gap: 3rem; /* <-- aquí genero espacio entre cada <li> en desktop */
     padding: 0;   /* quito padding extra en desktop */
-    transition: none;
+    /* transition: none; Already no transition needed as it's not animated by Framer Motion on desktop */
   }
 
   li {
@@ -349,7 +406,7 @@ const NavLink = styled(Link)`
   padding: 0.2em 0;
   font-size: 1.08rem;
   border-bottom: 2px solid transparent;
-  transition: border 0.25s, color 0.2s;
+  transition: border 0.25s, color 0.2s, transform 0.2s; /* Added transform for framer-motion */
 
   &:hover {
     border-bottom: 2px solid rgb(243, 18, 18);
