@@ -109,9 +109,6 @@ const NAV_LINKS = [
   { label: 'Contact', href: '/contact' },
 ];
 
-const MotionNavLink = motion(NavLink);
-const MotionNavList = motion(NavList);
-
 const navIconVariants = {
   initial: { opacity: 0, scale: 0.5, rotate: -90 },
   animate: { opacity: 1, scale: 1, rotate: 0, transition: { duration: 0.2 } },
@@ -431,6 +428,9 @@ const NavLink = styled(Link)`
     }
   }
 `;
+
+const MotionNavLink = motion(NavLink);
+const MotionNavList = motion(NavList);
 
 /* ---- HERO ---- */
 const Hero = styled.section`
